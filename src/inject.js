@@ -1,34 +1,38 @@
 // Trozos de JavaScript que la app ejecuta dentro de la página del video.
 
-// Controles de teclado: funcionan con el reproductor incrustado (YT IFrame API)
-// y también con la página normal de YouTube (elemento <video>).
-function ytfControl(cmd) {
+// Controles: funcionan con el reproductor incrustado (YT IFrame API), con la página normal
+// de YouTube y con cualquier <video> (la extensión usa la misma función en otras páginas).
+function ytfControl(cmd, step) {
+  const pct = (x) => `${Math.round(x)} %`;
   const p = window.ytfPlayer;
   if (p && typeof p.getPlayerState === 'function') {
     switch (cmd) {
       case 'toggle':
         if (p.getPlayerState() === 1) { p.pauseVideo(); return 'Pausa'; }
         p.playVideo(); return 'Play';
-      case 'back': p.seekTo(Math.max(0, p.getCurrentTime() - 10), true); return '−10 s';
-      case 'fwd': p.seekTo(p.getCurrentTime() + 10, true); return '+10 s';
-      case 'volup': p.unMute(); p.setVolume(Math.min(100, p.getVolume() + 10)); return `Volumen ${Math.min(100, p.getVolume() + 10)} %`;
-      case 'voldown': { const v = Math.max(0, p.getVolume() - 10); p.setVolume(v); return `Volumen ${v} %`; }
+      case 'seek': p.seekTo(Math.max(0, p.getCurrentTime() + step), true); return `${step > 0 ? '+' : '−'}${Math.abs(step)} s`;
+      case 'volume': { const v = Math.max(0, Math.min(100, p.getVolume() + step * 100)); p.unMute(); p.setVolume(v); return `Volumen ${pct(v)}`; }
+      case 'speed': {
+        const rates = p.getAvailablePlaybackRates ? p.getAvailablePlaybackRates() : [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+        const r = Math.max(rates[0], Math.min(rates[rates.length - 1], Math.round((p.getPlaybackRate() + step) * 100) / 100));
+        p.setPlaybackRate(r); return `Velocidad ${r}x`;
+      }
       default: return '';
     }
   }
-  const v = document.querySelector('video');
+  const v = document.pictureInPictureElement ||
+    [...document.querySelectorAll('video')].sort((a, b) => (b.clientWidth * b.clientHeight) - (a.clientWidth * a.clientHeight))[0];
   if (!v) return '';
   switch (cmd) {
     case 'toggle': if (v.paused) { v.play(); return 'Play'; } v.pause(); return 'Pausa';
-    case 'back': v.currentTime = Math.max(0, v.currentTime - 10); return '−10 s';
-    case 'fwd': v.currentTime += 10; return '+10 s';
-    case 'volup': v.muted = false; v.volume = Math.min(1, v.volume + 0.1); return `Volumen ${Math.round(v.volume * 100)} %`;
-    case 'voldown': v.volume = Math.max(0, v.volume - 0.1); return `Volumen ${Math.round(v.volume * 100)} %`;
+    case 'seek': v.currentTime = Math.max(0, v.currentTime + step); return `${step > 0 ? '+' : '−'}${Math.abs(step)} s`;
+    case 'volume': v.muted = false; v.volume = Math.max(0, Math.min(1, v.volume + step)); return `Volumen ${pct(v.volume * 100)}`;
+    case 'speed': v.playbackRate = Math.max(0.25, Math.min(4, Math.round((v.playbackRate + step) * 100) / 100)); return `Velocidad ${v.playbackRate}x`;
     default: return '';
   }
 }
 
-const controlScript = (cmd) => `(${ytfControl.toString()})(${JSON.stringify(cmd)})`;
+const controlScript = (cmd, step = 0) => `(${ytfControl.toString()})(${JSON.stringify(cmd)}, ${Number(step)})`;
 
 // Rechaza solo el aviso de cookies de YouTube/Google (la opción más privada).
 const rejectConsentScript = `(() => {
@@ -58,4 +62,4 @@ const fillPlayerScript = `(async () => {
   return false;
 })()`;
 
-module.exports = { controlScript, rejectConsentScript, fillPlayerScript };
+module.exports = { ytfControl, controlScript, rejectConsentScript, fillPlayerScript };

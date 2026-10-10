@@ -35,7 +35,7 @@
   <div class="bar">
     <div class="title" id="title"><b>▶</b> <span id="titleText">YT Flotante</span></div>
     <button id="auto" title="Moverse solo al lado contrario cuando hago clic (Ctrl+Shift+M)">⇄ Auto</button>
-    <button id="ghost" title="Modo fantasma: transparente al pasar el mouse">◐</button>
+    <button id="ghost" title="Transparencia al pasar el mouse: apagada / suave / media / fuerte (Ctrl+Shift+T)">◐</button>
     <button id="less" title="Más transparente">−</button>
     <button id="more" title="Menos transparente">+</button>
     <button id="stop" title="Cerrar video">■</button>
@@ -66,7 +66,7 @@
   $('go').onclick = go;
   $('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
   $('auto').onclick = () => window.ytf.toggleAuto();
-  $('ghost').onclick = () => window.ytf.toggleGhost();
+  $('ghost').onclick = () => window.ytf.cycleHover();
   $('less').onclick = () => window.ytf.opacity(-0.1);
   $('more').onclick = () => window.ytf.opacity(+0.1);
   $('stop').onclick = () => window.ytf.closeVideo();
@@ -75,7 +75,8 @@
   window.ytf.onState((s) => {
     $('auto').classList.toggle('on', s.autoMove && s.hookOk);
     $('auto').disabled = !s.hookOk;
-    $('ghost').classList.toggle('on', s.ghost && s.hookOk);
+    $('ghost').classList.toggle('on', s.hover !== 'off' && s.hookOk);
+    $('ghost').textContent = { off: '◐', suave: '◔', media: '◑', fuerte: '◕' }[s.hover] || '◐';
     $('ghost').disabled = !s.hookOk;
     $('hookWarn').hidden = s.hookOk;
     $('stop').hidden = !s.playing;

@@ -72,3 +72,24 @@ test('los scripts de control se pueden evaluar', () => {
   const { controlScript, rejectConsentScript, fillPlayerScript } = require('../src/inject');
   for (const s of [controlScript('toggle'), rejectConsentScript, fillPlayerScript]) new Function(s);
 });
+
+test('las firmas de la API de Windows son válidas', () => {
+  const koffi = require('koffi');
+  const { SIGNATURES, declareTypes, PIP_TITLE } = require('../src/pip-win');
+  declareTypes(koffi);
+  for (const [name, sig] of Object.entries(SIGNATURES)) koffi.proto(sig.replace(name, name + '_test'));
+  assert.equal(koffi.sizeof('RECT'), 16);
+  assert.ok(PIP_TITLE.test('Imagen en imagen') && PIP_TITLE.test('Picture in picture'));
+});
+
+test('los controles funcionan sobre un <video> cualquiera', () => {
+  const { ytfControl } = require('../src/inject');
+  const v = { paused: true, currentTime: 50, volume: 0.5, muted: true, playbackRate: 1, play() { this.paused = false; }, pause() { this.paused = true; } };
+  global.window = {};
+  global.document = { pictureInPictureElement: v, querySelectorAll: () => [v] };
+  assert.equal(ytfControl('toggle', 0), 'Play');
+  assert.equal(ytfControl('seek', -10), '−10 s'); assert.equal(v.currentTime, 40);
+  assert.equal(ytfControl('volume', 0.05), 'Volumen 55 %'); assert.equal(v.muted, false);
+  assert.equal(ytfControl('speed', 0.25), 'Velocidad 1.25x');
+  delete global.window; delete global.document;
+});
