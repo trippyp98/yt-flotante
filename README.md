@@ -48,6 +48,38 @@ Estando en un video de YouTube, haz clic en el marcador y se abre en YT Flotante
 - Tu sesión de YouTube (si inicias sesión dentro de la ventana) se guarda aparte del navegador.
 - Recuerda la posición, el tamaño, la transparencia y si el modo automático está activo.
 
+## Cómo funciona por dentro
+
+La app está hecha con **Electron**: un Chrome pequeño empaquetado como programa de Windows. Así puede mostrar YouTube y, al mismo tiempo, hacer cosas que una página web no puede, como quedar encima de todo o mover su propia ventana.
+
+```
+ Tú haces clic en cualquier parte
+            │
+            ▼
+ uiohook-napi (escucha el mouse en todo Windows, sin bloquear el clic)
+            │  x, y del clic
+            ▼
+ main.js ── convierte a píxeles lógicos (respeta el zoom 125 %, 150 %…)
+            │
+            ▼
+ placement.js ── ¿el clic fue en la misma mitad que el video, y fuera de él?
+            │ sí                          │ no
+            ▼                             ▼
+ animación de 180 ms a la otra mitad   no hace nada
+```
+
+| Archivo | Qué hace |
+|---|---|
+| `src/main.js` | El "cerebro". Crea la ventana sin bordes y siempre encima, carga el video, registra los atajos (Ctrl+Shift+Y/H/M), el icono de la bandeja, escucha los clics globales y anima el movimiento. Guarda tus ajustes en `settings.json`. |
+| `src/placement.js` | La regla de esquivar, sola y sin Electron para poder probarla: recibe dónde hiciste clic, dónde está el video y el tamaño de la pantalla, y devuelve la nueva posición (o nada). |
+| `src/youtube.js` | Entiende cualquier link de YouTube (`watch`, `youtu.be`, `shorts`, `live`, con tiempo `t=` o playlist) y arma la URL del reproductor. |
+| `src/index.html` | La barra de arriba (arrastrar, ⇄ Auto, transparencia, cerrar) y la pantalla para pegar el link. |
+| `src/preload.js` | El puente seguro entre la barra (página web) y `main.js`: expone solo las funciones necesarias. |
+| `test/logic.test.js` | Pruebas automáticas de los links y de la regla de movimiento (incluye dos monitores). |
+| `.github/workflows/build.yml` | En cada cambio, GitHub compila los `.exe` en una máquina Windows y, si es una versión (`v1.0.1`), los publica en *Releases*. |
+
+**El video:** se carga el reproductor "embed" de YouTube dentro de la ventana. Si YouTube responde que ese video no se puede incrustar, la app abre la página normal del video y pone el reproductor a pantalla completa *dentro* de la ventana.
+
 ## Desarrollo
 
 ```bash
