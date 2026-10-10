@@ -1,0 +1,44 @@
+{
+  "name": "yt-flotante",
+  "productName": "YT Flotante",
+  "version": "1.0.0",
+  "description": "Ventana flotante de YouTube para Windows que se aparta sola al lado contrario cuando haces clic donde está.",
+  "main": "src/main.js",
+  "author": "Felipe Álvarez",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/**/*.test.js\"",
+    "dist": "electron-builder --win --publish never"
+  },
+  "dependencies": {
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "io.github.ytflotante",
+    "productName": "YT Flotante",
+    "files": ["src/**/*", "assets/**/*", "package.json"],
+    "asarUnpack": ["node_modules/uiohook-napi/**"],
+    "npmRebuild": false,
+    "protocols": [{ "name": "YT Flotante", "schemes": ["ytpip"] }],
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "YT-Flotante-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "YT-Flotante-Portable-${version}.${ext}"
+    }
+  }
+}

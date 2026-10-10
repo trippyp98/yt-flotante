@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>YT Flotante</title>
+<style>
+  :root { --bar: 30px; --bg: #0b0b0b; --fg: #e8e8e8; --muted: #9a9a9a; --accent: #ff3b30; --chip: #1e1e1e; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font: 13px/1.4 "Segoe UI", system-ui, sans-serif; overflow: hidden; user-select: none; }
+  .bar { height: var(--bar); display: flex; align-items: center; gap: 4px; padding: 0 6px 0 10px;
+    background: #141414; border-bottom: 1px solid #222; -webkit-app-region: drag; }
+  .title { flex: 1; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .title b { color: var(--accent); font-weight: 600; }
+  button { -webkit-app-region: no-drag; background: transparent; color: var(--fg); border: 0; border-radius: 6px;
+    height: 22px; min-width: 24px; padding: 0 6px; font: inherit; font-size: 12px; cursor: pointer; }
+  button:hover { background: #2a2a2a; }
+  button.on { background: #3a1210; color: #ffb3ae; }
+  button.close:hover { background: var(--accent); color: #fff; }
+  .empty { position: absolute; inset: var(--bar) 0 0 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 10px; padding: 16px; text-align: center; }
+  .row { display: flex; gap: 6px; width: 100%; max-width: 380px; }
+  input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid #333;
+    background: var(--chip); color: var(--fg); font: inherit; outline: none; user-select: text; }
+  input:focus { border-color: var(--accent); }
+  .go { height: 32px; background: var(--accent); color: #fff; padding: 0 14px; font-weight: 600; }
+  .go:hover { background: #ff554b; }
+  .hint { color: var(--muted); font-size: 12px; }
+  kbd { background: var(--chip); border: 1px solid #333; border-radius: 4px; padding: 0 4px; font-size: 11px; }
+  .toast { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: #2a2a2a;
+    padding: 6px 12px; border-radius: 8px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <div class="title"><b>▶</b> YT Flotante</div>
+    <button id="auto" title="Moverse solo al lado contrario cuando hago clic (Ctrl+Shift+M)">⇄ Auto</button>
+    <button id="less" title="Más transparente">−</button>
+    <button id="more" title="Menos transparente">+</button>
+    <button id="stop" title="Cerrar video">■</button>
+    <button id="hide" class="close" title="Ocultar (Ctrl+Shift+H)">✕</button>
+  </div>
+
+  <div class="empty" id="empty">
+    <div class="row">
+      <input id="url" placeholder="Pega un link de YouTube…" spellcheck="false" autofocus>
+      <button class="go" id="go">Abrir</button>
+    </div>
+    <div class="hint">o copia un link y presiona <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd> desde cualquier lugar</div>
+    <div class="hint" id="hookWarn" hidden>No se pudo activar el movimiento automático en este equipo.</div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); };
+
+  async function go() {
+    const ok = await window.ytf.open($('url').value);
+    if (ok) $('url').value = ''; else toast('Ese no parece un link de YouTube');
+  }
+  $('go').onclick = go;
+  $('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  $('auto').onclick = () => window.ytf.toggleAuto();
+  $('less').onclick = () => window.ytf.opacity(-0.1);
+  $('more').onclick = () => window.ytf.opacity(+0.1);
+  $('stop').onclick = () => window.ytf.closeVideo();
+  $('hide').onclick = () => window.ytf.hide();
+
+  window.ytf.onState((s) => {
+    $('auto').classList.toggle('on', s.autoMove && s.hookOk);
+    $('auto').disabled = !s.hookOk;
+    $('hookWarn').hidden = s.hookOk;
+    $('stop').hidden = !s.playing;
+    if (!s.playing) setTimeout(() => $('url').focus(), 50);
+  });
+  window.ytf.onToast(toast);
+</script>
+</body>
+</html>
