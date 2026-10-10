@@ -28,15 +28,14 @@
   .go:hover { background: #ff554b; }
   .hint { color: var(--muted); font-size: 12px; }
   kbd { background: var(--chip); border: 1px solid #333; border-radius: 4px; padding: 0 4px; font-size: 11px; }
-  .toast { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: #2a2a2a;
-    padding: 6px 12px; border-radius: 8px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
-  .toast.show { opacity: 1; }
+  .title.flash { color: var(--fg); }
 </style>
 </head>
 <body>
   <div class="bar">
-    <div class="title"><b>▶</b> YT Flotante</div>
+    <div class="title" id="title"><b>▶</b> <span id="titleText">YT Flotante</span></div>
     <button id="auto" title="Moverse solo al lado contrario cuando hago clic (Ctrl+Shift+M)">⇄ Auto</button>
+    <button id="ghost" title="Modo fantasma: transparente al pasar el mouse">◐</button>
     <button id="less" title="Más transparente">−</button>
     <button id="more" title="Menos transparente">+</button>
     <button id="stop" title="Cerrar video">■</button>
@@ -51,11 +50,14 @@
     <div class="hint">o copia un link y presiona <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd> desde cualquier lugar</div>
     <div class="hint" id="hookWarn" hidden>No se pudo activar el movimiento automático en este equipo.</div>
   </div>
-  <div class="toast" id="toast"></div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); };
+  // Los avisos se muestran en la barra de arriba (el video tapa el resto de la ventana).
+  const toast = (msg) => {
+    const t = $('titleText'); t.textContent = msg; $('title').classList.add('flash');
+    clearTimeout(t._h); t._h = setTimeout(() => { t.textContent = 'YT Flotante'; $('title').classList.remove('flash'); }, 2200);
+  };
 
   async function go() {
     const ok = await window.ytf.open($('url').value);
@@ -64,6 +66,7 @@
   $('go').onclick = go;
   $('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
   $('auto').onclick = () => window.ytf.toggleAuto();
+  $('ghost').onclick = () => window.ytf.toggleGhost();
   $('less').onclick = () => window.ytf.opacity(-0.1);
   $('more').onclick = () => window.ytf.opacity(+0.1);
   $('stop').onclick = () => window.ytf.closeVideo();
@@ -72,6 +75,8 @@
   window.ytf.onState((s) => {
     $('auto').classList.toggle('on', s.autoMove && s.hookOk);
     $('auto').disabled = !s.hookOk;
+    $('ghost').classList.toggle('on', s.ghost && s.hookOk);
+    $('ghost').disabled = !s.hookOk;
     $('hookWarn').hidden = s.hookOk;
     $('stop').hidden = !s.playing;
     if (!s.playing) setTimeout(() => $('url').focus(), 50);

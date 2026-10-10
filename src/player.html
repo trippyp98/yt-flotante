@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>YTF</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #player, iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+</style>
+</head>
+<body>
+<div id="player"></div>
+<script>
+  // Esta página la sirve la propia app desde http://localhost, para que YouTube vea
+  // un sitio "normal" que incrusta el video (sin esto, YouTube a veces responde con error 153).
+  // Se comunica con la app cambiando el título de la página: "YTF:<evento>:<dato>".
+  const q = new URLSearchParams(location.search);
+  const id = q.get('id');
+  const start = parseInt(q.get('start') || '0', 10) || 0;
+  const list = q.get('list');
+  const say = (ev, data = '') => { document.title = `YTF:${ev}:${data}:${Date.now()}`; };
+
+  window.onYouTubeIframeAPIReady = () => {
+    const vars = { autoplay: 1, rel: 0, playsinline: 1, start, origin: location.origin };
+    if (list) { vars.list = list; vars.listType = 'playlist'; }
+    window.ytfPlayer = new YT.Player('player', {
+      videoId: id,
+      host: 'https://www.youtube.com',
+      playerVars: vars,
+      events: {
+        onReady: (e) => { e.target.playVideo(); say('ready'); },
+        onError: (e) => say('error', e.data),
+      },
+    });
+  };
+
+  const s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  s.onerror = () => say('error', 'api');
+  document.head.appendChild(s);
+</script>
+</body>
+</html>

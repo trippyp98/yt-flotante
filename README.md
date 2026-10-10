@@ -22,31 +22,40 @@ Ventana flotante de YouTube para Windows que **se queda siempre encima** de lo q
 |---|---|
 | Pegar el link en la ventana y **Abrir** | Reproduce el video flotando |
 | Copiar un link de YouTube y presionar **Ctrl + Shift + Y** | Lo abre al tiro, estés donde estés |
+| Botón **▶** de la extensión en Chrome o **Alt + Y** | Pasa el video de la pestaña a la app, en el mismo minuto, y pausa la pestaña |
+| **Ctrl + Shift + Espacio** | Play / pausa |
+| **Ctrl + Shift + ← / →** | Atrás / adelante 10 segundos |
+| **Ctrl + Shift + ↑ / ↓** | Subir / bajar volumen |
 | **Ctrl + Shift + H** | Mostrar / ocultar la ventana |
 | **Ctrl + Shift + M** o botón **⇄ Auto** | Activa / desactiva el movimiento automático |
+| Botón **◐** | Modo fantasma: el video se vuelve casi transparente cuando pasas el mouse encima |
 | Botones **− / +** | Más o menos transparencia |
 | Arrastrar la barra de arriba | Mover la ventana a mano |
 | Arrastrar los bordes | Cambiar el tamaño |
 | **✕** | Esconde la ventana (sigue en la bandeja, junto al reloj) |
-| Icono en la bandeja → **Salir** | Cierra la app |
+| Icono en la bandeja | Más opciones: cómo se mueve, transparencia, controles, iniciar con Windows, actualizar, salir |
 
-**Regla del movimiento:** cuando haces clic *fuera* del video, en la misma mitad de la pantalla donde está el video, este se desliza a la otra mitad (misma altura). Los clics sobre el propio video o en la mitad contraria no lo mueven. Con varios monitores, solo reacciona a clics en el monitor donde está el video. El clic igual llega a tu programa normalmente.
+**Regla del movimiento:** cuando haces clic *fuera* del video, en la misma mitad de la pantalla donde está el video, este se desliza a la otra mitad. Hay dos modos (icono de la bandeja → *Cómo se mueve*):
 
-### Botón en el navegador (opcional)
+- **Al otro lado** (por defecto): cambia de lado y mantiene la altura.
+- **A la esquina contraria al clic**: si haces clic arriba se va abajo, y al revés.
 
-Crea un marcador nuevo en Chrome/Edge y en la URL pega:
+Los clics sobre el propio video o en la mitad contraria no lo mueven. Con varios monitores, solo reacciona a clics en el monitor donde está el video. El clic igual llega a tu programa normalmente.
 
-```
-javascript:location.href='ytpip://open?url='+encodeURIComponent(location.href)
-```
+### Extensión de Chrome
 
-Estando en un video de YouTube, haz clic en el marcador y se abre en YT Flotante (la primera vez el navegador pregunta si permites abrir la app).
+1. Baja `YT-Flotante-Extension-Chrome.zip` desde [Releases](../../releases) y descomprímelo (o usa icono de la bandeja → *Extensión de Chrome…*, que abre la carpeta ya instalada).
+2. En Chrome abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar extensión sin empaquetar**. Elige la carpeta.
+3. En cualquier video de YouTube aprieta el botón ▶ de la barra de Chrome (o **Alt + Y**). También puedes hacer clic derecho sobre un link de YouTube → *Abrir en YT Flotante*.
+
+La primera vez Chrome pregunta si permite abrir YT Flotante: marca *Permitir siempre*.
 
 ### Detalles
 
-- Usa el reproductor "embed" de YouTube. Si un video no permite reproducirse incrustado, la app abre la página normal y pone el reproductor a llenar la ventana.
+- El video se reproduce con el reproductor oficial de YouTube. Si un video no permite reproducirse incrustado, la app abre la página normal, **rechaza sola el aviso de cookies** y pone el reproductor a llenar la ventana.
 - Tu sesión de YouTube (si inicias sesión dentro de la ventana) se guarda aparte del navegador.
-- Recuerda la posición, el tamaño, la transparencia y si el modo automático está activo.
+- Recuerda la posición, el tamaño, la transparencia y tus opciones.
+- **Se actualiza sola** (versión instalada, no la portable): cuando hay una versión nueva en Releases la baja en segundo plano y la instala al salir.
 
 ## Cómo funciona por dentro
 
@@ -70,15 +79,18 @@ La app está hecha con **Electron**: un Chrome pequeño empaquetado como program
 
 | Archivo | Qué hace |
 |---|---|
-| `src/main.js` | El "cerebro". Crea la ventana sin bordes y siempre encima, carga el video, registra los atajos (Ctrl+Shift+Y/H/M), el icono de la bandeja, escucha los clics globales y anima el movimiento. Guarda tus ajustes en `settings.json`. |
+| `src/main.js` | El "cerebro". Crea la ventana sin bordes y siempre encima, carga el video, registra los atajos, el icono de la bandeja, escucha el mouse en todo Windows (clics para esquivar, movimiento para el modo fantasma), anima el movimiento y revisa actualizaciones. Guarda tus ajustes en `settings.json`. |
 | `src/placement.js` | La regla de esquivar, sola y sin Electron para poder probarla: recibe dónde hiciste clic, dónde está el video y el tamaño de la pantalla, y devuelve la nueva posición (o nada). |
-| `src/youtube.js` | Entiende cualquier link de YouTube (`watch`, `youtu.be`, `shorts`, `live`, con tiempo `t=` o playlist) y arma la URL del reproductor. |
-| `src/index.html` | La barra de arriba (arrastrar, ⇄ Auto, transparencia, cerrar) y la pantalla para pegar el link. |
+| `src/player.html` | La página del reproductor. La app la sirve desde `http://localhost` para que YouTube la trate como un sitio normal que incrusta un video. Avisa a la app si el video cargó o dio error. |
+| `src/inject.js` | Pequeños scripts que la app ejecuta dentro del video: play/pausa, ±10 s, volumen, rechazar cookies y llenar la ventana con el reproductor. |
+| `src/youtube.js` | Entiende cualquier link de YouTube (`watch`, `youtu.be`, `shorts`, `live`, con tiempo `t=` o playlist). |
+| `src/index.html` | La barra de arriba (arrastrar, ⇄ Auto, ◐ fantasma, transparencia, cerrar), los avisos y la pantalla para pegar el link. |
 | `src/preload.js` | El puente seguro entre la barra (página web) y `main.js`: expone solo las funciones necesarias. |
-| `test/logic.test.js` | Pruebas automáticas de los links y de la regla de movimiento (incluye dos monitores). |
-| `.github/workflows/build.yml` | En cada cambio, GitHub compila los `.exe` en una máquina Windows y, si es una versión (`v1.0.1`), los publica en *Releases*. |
+| `extension/` | La extensión de Chrome: pausa la pestaña, toma el minuto y abre `ytpip://open?url=…`, que Windows entrega a la app. |
+| `test/logic.test.js` | Pruebas automáticas de los links, de la regla de movimiento (lados, esquinas, dos monitores) y de los scripts. |
+| `.github/workflows/build.yml` | En cada cambio, GitHub compila en una máquina Windows. Si es una versión (`v1.1.0`), publica en *Releases* el instalador, la versión portable, la extensión y el archivo `latest.yml` que usan las actualizaciones automáticas. |
 
-**El video:** se carga el reproductor "embed" de YouTube dentro de la ventana. Si YouTube responde que ese video no se puede incrustar, la app abre la página normal del video y pone el reproductor a pantalla completa *dentro* de la ventana.
+**El video:** la app sirve `player.html` desde localhost y ahí carga el reproductor oficial de YouTube. Si YouTube dice que ese video no se puede incrustar (o no responde en 12 segundos), la app abre la página normal del video, rechaza el aviso de cookies y pone el reproductor a pantalla completa *dentro* de la ventana.
 
 ## Desarrollo
 

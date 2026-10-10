@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "YT Flotante",
+  "version": "1.1.0",
+  "description": "Abre el video de YouTube en la app YT Flotante, en el mismo minuto, y pausa la pestaña.",
+  "icons": { "16": "icon16.png", "32": "icon32.png", "48": "icon48.png", "128": "icon128.png" },
+  "action": {
+    "default_title": "Abrir en YT Flotante (Alt+Y)",
+    "default_icon": { "16": "icon16.png", "32": "icon32.png" }
+  },
+  "permissions": ["scripting", "activeTab", "contextMenus"],
+  "host_permissions": ["*://*.youtube.com/*"],
+  "background": { "service_worker": "background.js" },
+  "commands": {
+    "_execute_action": { "suggested_key": { "default": "Alt+Y" } }
+  }
+}

@@ -60,3 +60,15 @@ test('funciona con un segundo monitor a la derecha', () => {
   const v = { x: 3344, y: 100, width: 480, height: 290 };
   assert.deepEqual(dodgeTarget({ x: 3000, y: 600 }, v, wa2, true), { x: 1936, y: 100 });
 });
+
+test('modo esquinas: va a la esquina contraria al clic', () => {
+  // clic arriba a la derecha → video (abajo derecha) se va abajo a la izquierda
+  assert.deepEqual(dodgeTarget({ x: 1500, y: 200 }, right, wa, true, 16, 'esquinas'), { x: 16, y: 734 });
+  // clic abajo a la derecha (fuera del video) → se va arriba a la izquierda
+  assert.deepEqual(dodgeTarget({ x: 1000, y: 900 }, right, wa, true, 16, 'esquinas'), { x: 16, y: 16 });
+});
+
+test('los scripts de control se pueden evaluar', () => {
+  const { controlScript, rejectConsentScript, fillPlayerScript } = require('../src/inject');
+  for (const s of [controlScript('toggle'), rejectConsentScript, fillPlayerScript]) new Function(s);
+});
