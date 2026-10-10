@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
   "name": "YT Flotante",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Pone a flotar cualquier video (YouTube, clases, Vimeo…) y deja que la app YT Flotante lo mueva, lo haga transparente y controle el volumen.",
   "icons": { "16": "icon16.png", "32": "icon32.png", "48": "icon48.png", "128": "icon128.png" },
   "action": {
     "default_title": "Poner el video a flotar (Alt+Y)",
     "default_icon": { "16": "icon16.png", "32": "icon32.png" }
   },
-  "permissions": ["scripting", "activeTab", "contextMenus"],
+  "permissions": ["scripting", "activeTab", "contextMenus", "alarms"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
   "minimum_chrome_version": "116",

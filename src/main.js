@@ -266,7 +266,8 @@ function startExtensionBridge() {
       else if (msg.type === 'pip-closed') forgetPip();
       else if (msg.type === 'label') toast(msg.text);
     });
-    sock.on('close', () => { if (extSocket === sock) extSocket = null; });
+    const ping = setInterval(() => { if (sock.readyState === 1) sock.send('{"type":"ping"}'); }, 20000);
+    sock.on('close', () => { clearInterval(ping); if (extSocket === sock) extSocket = null; });
   });
 }
 

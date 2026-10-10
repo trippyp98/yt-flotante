@@ -18,7 +18,7 @@ function connect() {
   try { ws = new WebSocket(APP_URL); } catch { ws = null; return; }
   ws.onopen = () => { if (pipFrame) send({ type: 'pip-open' }); };
   ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } onAppMessage(m); };
-  ws.onclose = () => { ws = null; if (pipFrame) setTimeout(connect, 3000); };
+  ws.onclose = () => { ws = null; setTimeout(connect, 5000); };
   ws.onerror = () => {};
 }
 
@@ -39,8 +39,30 @@ function setFloating(frame) {
   }
 }
 
+// Busca en todas las pestañas el video que está en "Imagen en imagen"
+// (por si se abrió desde el propio reproductor y no con Alt+Y).
+async function findPipFrame() {
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.id || !/^https?:/.test(tab.url || '')) continue;
+    try {
+      const frames = await chrome.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true }, func: () => !!document.pictureInPictureElement,
+      });
+      const f = frames.find((x) => x.result);
+      if (f) return { tabId: tab.id, frameId: f.frameId };
+    } catch { /* pestaña sin permiso */ }
+  }
+  return null;
+}
+
 async function onAppMessage(m) {
-  if (m.type !== 'control' || !pipFrame) return;
+  if (m.type !== 'control') return;
+  if (!pipFrame) {
+    const found = await findPipFrame();
+    if (!found) return;
+    pipFrame = found;
+  }
   try {
     const [res] = await chrome.scripting.executeScript({
       target: { tabId: pipFrame.tabId, frameIds: [pipFrame.frameId] },
@@ -51,7 +73,7 @@ async function onAppMessage(m) {
       send({ type: 'label', text: label });
       flashBadge(label.match(/\d+(\.\d+)?/) ? label.match(/\d+(\.\d+)?/)[0] : '•');
     }
-  } catch { setFloating(null); }
+  } catch { pipFrame = null; }
 }
 
 // ---------- Funciones que se ejecutan dentro de la página ----------
@@ -155,6 +177,13 @@ async function toggleFloat(tab) {
 const isYouTube = (url) => /^https?:\/\/([a-z]+\.)?(youtube\.com|youtu\.be)\//i.test(url || '');
 
 chrome.action.onClicked.addListener(toggleFloat);
+
+// Conectarse con la app apenas Chrome parte, y revisar la conexión cada minuto.
+// (La app manda un "ping" cada 20 s, lo que mantiene despierta a la extensión.)
+chrome.runtime.onStartup.addListener(connect);
+chrome.alarms.create('ytf-connect', { periodInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'ytf-connect') connect(); });
+connect();
 
 chrome.commands.onCommand.addListener(async (command, tab) => {
   if (command === 'send-to-app' && tab && isYouTube(tab.url)) {
