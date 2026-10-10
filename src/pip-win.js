@@ -32,7 +32,7 @@ const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
 
 const BROWSERS = new Set(['chrome.exe', 'msedge.exe', 'brave.exe', 'opera.exe', 'vivaldi.exe', 'chromium.exe']);
 // Títulos conocidos de la ventana "Imagen en imagen" en distintos idiomas.
-const PIP_TITLE = /picture.?in.?picture|imagen en imagen|pantalla en pantalla|image dans l.image|bild.im.bild|picture-in-picture/i;
+const PIP_TITLE = /yt flotante|picture.?in.?picture|imagen en imagen|pantalla en pantalla|image dans l.image|bild.im.bild|picture-in-picture/i;
 
 let api = null;
 

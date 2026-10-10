@@ -1,25 +1,24 @@
 {
   "manifest_version": 3,
   "name": "YT Flotante",
-  "version": "1.2.1",
-  "description": "Pone a flotar cualquier video (YouTube, clases, Vimeo…) y deja que la app YT Flotante lo mueva, lo haga transparente y controle el volumen.",
+  "version": "2.0.0",
+  "description": "Pone a flotar cualquier video (YouTube, clases, Vimeo…) en una ventana con controles y listas. La app YT Flotante la mueve para que no te tape y la vuelve transparente.",
   "icons": { "16": "icon16.png", "32": "icon32.png", "48": "icon48.png", "128": "icon128.png" },
   "action": {
-    "default_title": "Poner el video a flotar (Alt+Y)",
+    "default_title": "Poner el video a flotar (Alt+Y) · clic derecho para listas",
     "default_icon": { "16": "icon16.png", "32": "icon32.png" }
   },
-  "permissions": ["scripting", "activeTab", "contextMenus", "alarms"],
+  "permissions": ["scripting", "activeTab", "contextMenus", "alarms", "storage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
-  "minimum_chrome_version": "116",
-  "commands": {
-    "_execute_action": {
-      "suggested_key": { "default": "Alt+Y" },
-      "description": "Poner a flotar / dejar de flotar el video de la pestaña"
-    },
-    "send-to-app": {
-      "suggested_key": { "default": "Alt+Shift+Y" },
-      "description": "Abrir el video de YouTube en la ventana de la app"
+  "options_page": "lists.html",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["common.js", "content.js"],
+      "all_frames": true,
+      "run_at": "document_start"
     }
-  }
+  ],
+  "minimum_chrome_version": "116"
 }

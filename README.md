@@ -18,49 +18,45 @@ Ventana flotante para Windows que **se queda siempre encima** de lo que estás h
 
 ## Usar
 
-Hay dos formas de poner un video a flotar:
+Todo se hace desde Chrome con la **extensión** (ver abajo cómo instalarla). La **app** queda junto al reloj, sin ventana, y se encarga de lo que Chrome no permite: apartar la ventana flotante de tus clics y volverla transparente.
 
-1. **Cualquier video de Chrome** (clases, cursos con login, Vimeo, YouTube…): con la extensión instalada, en la pestaña del video presiona **Alt + Y** (o el botón ▶ de la barra de Chrome). El video sale en la ventanita "Imagen en imagen" de Chrome, y la app la maneja: la mueve, la vuelve transparente y le cambia el volumen. Funciona aunque la página pida iniciar sesión, porque el video sigue en tu Chrome. Si abres "Imagen en imagen" por tu cuenta (por ejemplo con el botón del reproductor), la app también lo detecta.
-2. **YouTube en la ventana propia de la app**: pega el link en la app, copia un link y presiona **Ctrl + Shift + Y**, o en YouTube presiona **Alt + Shift + Y**.
-
-La app tiene que estar abierta (icono rojo junto al reloj). Puedes esconder su ventana con **✕** y seguirá manejando los videos de Chrome.
-
-| Atajo | Qué hace |
+| Atajo (en cualquier página) | Qué hace |
 |---|---|
-| **Alt + Y** (en Chrome) | Poner a flotar / dejar de flotar el video de la pestaña |
-| **Rueda del mouse** sobre el video | Subir / bajar volumen |
-| Pasar el mouse por encima | El video se vuelve transparente para ver lo de abajo |
-| **Ctrl + Shift + T** o botón **◐** | Cambia el nivel de transparencia al pasar el mouse: apagada → suave (70 %) → media (45 %) → fuerte (20 %) |
-| **Ctrl + Shift + Espacio** | Play / pausa |
-| **Ctrl + Shift + ← / →** | Atrás / adelante 10 segundos |
-| **Ctrl + Shift + ↑ / ↓** | Subir / bajar volumen |
-| **Ctrl + Shift + RePág / AvPág** | Más rápido / más lento (útil en clases) |
-| **Ctrl + Shift + M** o botón **⇄ Auto** | Activa / desactiva el movimiento automático |
-| **Ctrl + Shift + Y** | Abre en la app el link de YouTube que tengas copiado |
-| **Ctrl + Shift + H** | Mostrar / ocultar la ventana de la app |
-| Icono en la bandeja | Más opciones: cómo se mueve, niveles de transparencia, videos de Chrome, controles, iniciar con Windows, actualizar, salir |
+| **Alt + Y** | Pone a flotar el video de la página en una ventana con controles (⏮ ⟲ ⏯ ⟳ ⏭, velocidad, volumen, lista). Otra vez Alt + Y la cierra |
+| **Alt + L** | Reproduce tu **lista activa** en la ventana flotante |
+| **Alt + Shift + Y** | (En YouTube) abre el video en la ventana propia de la app |
+| Clic derecho → *Agregar esta página / este link a mi lista* | Suma videos o clases a la lista activa |
+| Clic derecho → *Administrar listas…* | Crear listas ("Música", "Clases de X"), ordenar, aleatorio, repetir, pegar varios links |
 
-**Regla del movimiento:** cuando haces clic *fuera* del video, en la misma mitad de la pantalla donde está el video, este se desliza a la otra mitad. Hay dos modos (icono de la bandeja → *Cómo se mueve*):
+Con la app abierta:
 
-- **Al otro lado** (por defecto): cambia de lado y mantiene la altura.
-- **A la esquina contraria al clic**: si haces clic arriba se va abajo, y al revés.
+| | Qué hace |
+|---|---|
+| Clic en la mitad de la pantalla donde está el video | El video se va a la otra mitad |
+| Pasar el mouse por encima | Se vuelve transparente: suave 70 %, media 45 % o fuerte 20 % (**Ctrl + Shift + T** cambia el nivel) |
+| **Rueda del mouse** sobre el video | Volumen |
+| **Ctrl + Shift + Espacio / ← → / ↑ ↓ / RePág AvPág** | Play-pausa / ±10 s / volumen / velocidad, desde cualquier programa |
+| Icono rojo junto al reloj | Muestra si la extensión está conectada, y todas las opciones |
 
-Los clics sobre el propio video o en la mitad contraria no lo mueven. Con varios monitores, solo reacciona a clics en el monitor donde está el video. El clic igual llega a tu programa normalmente.
+### Listas
 
-### Extensión de Chrome
+- **Música de YouTube:** pega una lista de YouTube (`…/playlist?list=…`) o varios videos. Pasan solos de uno al siguiente dentro de la ventana flotante.
+- **Clases de una plataforma:** agrega la página de cada clase (clic derecho → *Agregar esta página a mi lista*). Cuando termina una, la ventana te avisa y abre la siguiente clase en la misma pestaña; ahí aparece un botón **▶ Flotar** (o Alt + Y). Sigue usando tu sesión de Chrome, así que funcionan los cursos con login.
+- Puedes mezclar los dos tipos en una misma lista.
 
-1. Baja `YT-Flotante-Extension-Chrome.zip` desde [Releases](../../releases) y descomprímelo (o usa icono de la bandeja → *Extensión de Chrome…*, que abre la carpeta ya instalada).
-2. En Chrome abre `chrome://extensions`, activa **Modo de desarrollador** y pulsa **Cargar extensión sin empaquetar**. Elige la carpeta.
-3. En cualquier página con un video presiona **Alt + Y** (o el botón ▶ de la barra de Chrome, o clic derecho → *Poner este video a flotar*). Para mandar un video de YouTube a la ventana de la app: **Alt + Shift + Y**, o clic derecho sobre un link de YouTube → *Abrir link en la app YT Flotante*.
+### Instalar la extensión (modo desarrollador)
 
-Si vienes de la versión 1.1, vuelve a cargar la carpeta de la extensión (botón ↻ en `chrome://extensions`). La primera vez que mandas algo a la app, Chrome pregunta si permite abrir YT Flotante: marca *Permitir siempre*.
+1. Baja `YT-Flotante-Extension-Chrome.zip` desde [Releases](../../releases) y descomprímelo en una carpeta que no vayas a borrar (o usa icono rojo → *Extensión de Chrome…*, que abre la carpeta ya instalada con la app).
+2. En Chrome abre `chrome://extensions`, activa **Modo de desarrollador** (arriba a la derecha) y pulsa **Cargar extensión sin empaquetar**. Elige la carpeta.
+3. **Recarga las pestañas** que ya tenías abiertas (F5) para que tomen la extensión.
+4. Si actualizas a una versión nueva: reemplaza la carpeta y aprieta **↻** en la tarjeta de la extensión.
+
+Los atajos Alt + Y / Alt + L los escucha la propia página, así que no hace falta configurar nada en `chrome://extensions/shortcuts`. No funcionan en páginas internas de Chrome (`chrome://…`) ni en la Chrome Web Store.
 
 ### Detalles
 
-- El video se reproduce con el reproductor oficial de YouTube. Si un video no permite reproducirse incrustado, la app abre la página normal, **rechaza sola el aviso de cookies** y pone el reproductor a llenar la ventana.
-- Tu sesión de YouTube (si inicias sesión dentro de la ventana) se guarda aparte del navegador.
-- Recuerda la posición, el tamaño, la transparencia y tus opciones.
-- **Se actualiza sola** (versión instalada, no la portable): cuando hay una versión nueva en Releases la baja en segundo plano y la instala al salir.
+- La ventana flotante usa *Document Picture-in-Picture* (Chrome 116 o más nuevo). Si un video está dentro de un reproductor incrustado de otro sitio (común en plataformas de cursos), se usa el "Imagen en imagen" normal de Chrome; la app igual lo mueve y lo hace transparente.
+- La app se actualiza sola (versión instalada). La extensión se actualiza reemplazando la carpeta.
 
 ## Cómo funciona por dentro
 
@@ -92,7 +88,10 @@ La app está hecha con **Electron**: un Chrome pequeño empaquetado como program
 | `src/youtube.js` | Entiende cualquier link de YouTube (`watch`, `youtu.be`, `shorts`, `live`, con tiempo `t=` o playlist). |
 | `src/index.html` | La barra de arriba (arrastrar, ⇄ Auto, ◐ fantasma, transparencia, cerrar), los avisos y la pantalla para pegar el link. |
 | `src/preload.js` | El puente seguro entre la barra (página web) y `main.js`: expone solo las funciones necesarias. |
-| `extension/` | La extensión de Chrome: busca el video más grande de la pestaña (también dentro de iframes, como los reproductores de cursos) y lo pone en "Imagen en imagen". Se conecta con la app por `ws://127.0.0.1:47321` para recibir volumen, pausa, saltos y velocidad. Para YouTube también puede mandar el video a la app con `ytpip://open?url=…`. |
+| `extension/content.js` | Corre en cada página: escucha Alt + Y / Alt + L, arma la ventana flotante con sus controles, mueve el `<video>` de la página adentro (o pone el reproductor de YouTube), y avanza por la lista. |
+| `extension/background.js` | Fondo de la extensión: conexión con la app (`ws://127.0.0.1:47321`), menús de clic derecho, abrir la siguiente clase de una lista, y plan B de "Imagen en imagen" para videos dentro de iframes. |
+| `extension/lists.html` / `lists.js` | Administrador de listas. |
+| `extension/common.js` | Lectura de links de YouTube y guardado de listas (`chrome.storage`). |
 | `test/logic.test.js` | Pruebas automáticas de los links, de la regla de movimiento (lados, esquinas, dos monitores) y de los scripts. |
 | `.github/workflows/build.yml` | En cada cambio, GitHub compila en una máquina Windows. Si es una versión (`v1.1.0`), publica en *Releases* el instalador, la versión portable, la extensión y el archivo `latest.yml` que usan las actualizaciones automáticas. |
 

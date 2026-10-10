@@ -40,7 +40,7 @@ app.userAgentFallback = app.userAgentFallback
 
 // ---------- Ajustes persistentes ----------
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
-let settings = { autoMove: true, opacity: 1, bounds: null, mode: 'lados', hover: 'media', pipControl: true };
+let settings = { autoMove: true, opacity: 1, bounds: null, mode: 'lados', hover: 'media', pipControl: true, showOnStart: false };
 function loadSettings() {
   try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch { /* primera vez */ }
   if ('ghost' in settings) { if (settings.ghost) settings.hover = 'media'; delete settings.ghost; }
@@ -57,6 +57,7 @@ let current = null;    // video actual {id,start,list}
 let pendingInfo = null;
 let pipHwnd = null;        // ventana "Imagen en imagen" de Chrome que estamos controlando
 let extSocket = null;      // conexión con la extensión de Chrome
+let extVersion = null;     // versión de la extensión conectada
 let playerOrigin = null;   // http://localhost:<puerto>
 let readyTimer = null;     // si el reproductor no arranca a tiempo, se usa la página normal
 
@@ -106,6 +107,7 @@ function createWindow() {
   const b = settings.bounds && boundsAreVisible(settings.bounds) ? settings.bounds : defaultBounds();
   win = new BrowserWindow({
     ...b,
+    show: !!settings.showOnStart,   // por defecto la app vive junto al reloj; la ventana se abre al usarla
     minWidth: 240,
     minHeight: 135 + BAR,
     frame: false,
@@ -262,12 +264,13 @@ function startExtensionBridge() {
     extSocket = sock;
     sock.on('message', (raw) => {
       let msg; try { msg = JSON.parse(raw); } catch { return; }
-      if (msg.type === 'pip-open') watchForPip(3000);
+      if (msg.type === 'hello') { extVersion = msg.version || '?'; rebuildTrayMenu(); }
+      else if (msg.type === 'pip-open') watchForPip(3000);
       else if (msg.type === 'pip-closed') forgetPip();
       else if (msg.type === 'label') toast(msg.text);
     });
     const ping = setInterval(() => { if (sock.readyState === 1) sock.send('{"type":"ping"}'); }, 20000);
-    sock.on('close', () => { clearInterval(ping); if (extSocket === sock) extSocket = null; });
+    sock.on('close', () => { clearInterval(ping); if (extSocket === sock) { extSocket = null; extVersion = null; rebuildTrayMenu(); } });
   });
 }
 
@@ -498,7 +501,10 @@ let readyVersion = null;
 function rebuildTrayMenu(version) {
   if (version) readyVersion = version;
   if (!tray) return;
+  const connected = !!(extSocket && extSocket.readyState === 1);
   const items = [
+    { label: connected ? `Extensión de Chrome: conectada ✓ (v${extVersion})` : 'Extensión de Chrome: no conectada', enabled: false },
+    { type: 'separator' },
     { label: 'Abrir link copiado  (Ctrl+Shift+Y)', click: openFromClipboard },
     { label: 'Mostrar / ocultar  (Ctrl+Shift+H)', click: toggleVisible },
     { type: 'separator' },
@@ -545,6 +551,7 @@ function rebuildTrayMenu(version) {
     { label: 'Volver a la esquina inferior derecha', click: () => { if (win) win.setBounds(defaultBounds()); } },
     { type: 'separator' },
     { label: 'Extensión de Chrome…', click: showExtensionHelp },
+    { label: 'Mostrar la ventana de la app al iniciar', type: 'checkbox', checked: !!settings.showOnStart, click: (i) => { settings.showOnStart = i.checked; saveSettings(); } },
     { label: 'Iniciar con Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
   ];
   if (readyVersion) {
