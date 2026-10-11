@@ -1,7 +1,7 @@
 {
   "name": "yt-flotante",
   "productName": "YT Flotante",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Ventana flotante para YouTube y cualquier video de Chrome que se aparta sola cuando haces clic donde está.",
   "main": "src/main.js",
   "author": "Felipe Álvarez",

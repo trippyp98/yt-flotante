@@ -99,10 +99,16 @@
   const CSS = `
     *{box-sizing:border-box} html,body{margin:0;height:100%;background:#000;color:#eee;overflow:hidden;
       font:12px/1.3 "Segoe UI",system-ui,sans-serif;user-select:none}
-    #stage{position:absolute;inset:0 0 ${BAR_H}px 0;background:#000}
-    #stage video,#stage iframe{width:100%;height:100%;border:0;object-fit:contain;background:#000;display:block}
+    #stage{position:absolute;inset:0;background:#000}
+    /* !important: los reproductores (YouTube, etc.) le ponen al video tamaño y posición fijos;
+       así el video siempre llena la ventana flotante, aunque la agrandes o achiques. */
+    #stage video,#stage iframe{position:static!important;left:auto!important;top:auto!important;
+      width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;
+      transform:none!important;margin:0!important;border:0;object-fit:contain!important;background:#000;display:block}
+    /* la barra aparece solo al pasar el mouse, para que el video use toda la ventana */
     #bar{position:absolute;left:0;right:0;bottom:0;height:${BAR_H}px;display:flex;align-items:center;gap:2px;
-      padding:0 6px;background:#141414;border-top:1px solid #222}
+      padding:0 6px;background:linear-gradient(transparent,rgba(0,0,0,.85) 40%);opacity:0;transition:opacity .2s}
+    body:hover #bar, #bar:focus-within, body.show-bar #bar{opacity:1}
     button{background:transparent;color:#eee;border:0;border-radius:6px;height:26px;min-width:26px;padding:0 5px;
       font:inherit;font-size:13px;cursor:pointer} button:hover{background:#2a2a2a} button.on{color:#ff6b61}
     #title{flex:1;min-width:30px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#9a9a9a;padding:0 6px}
@@ -149,7 +155,7 @@
 
   async function openWindow() {
     if (!('documentPictureInPicture' in window)) return null;
-    const pipWin = await window.documentPictureInPicture.requestWindow({ width: 480, height: 270 + BAR_H });
+    const pipWin = await window.documentPictureInPicture.requestWindow({ width: 480, height: 270 });
     return pipWin;
   }
 
@@ -161,6 +167,8 @@
     if (!pipWin) return false;
 
     const $ = buildWindow(pipWin);
+    pipWin.document.body.classList.add('show-bar');                       // mostrar los controles al abrir
+    setTimeout(() => pipWin.document.body.classList.remove('show-bar'), 2500);
     session = { pipWin, $, queue, player: null, video: null, placeholder: null, iframe: null };
 
     pipWin.addEventListener('pagehide', () => {
