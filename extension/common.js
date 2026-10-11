@@ -51,6 +51,6 @@ var YTF = globalThis.YTF || (() => {
     return data.active;
   }
 
-  return { VERSION: '2.0.4', parseYouTube, load, save, addToActive };
+  return { VERSION: '2.1.0', parseYouTube, load, save, addToActive };
 })();
 globalThis.YTF = YTF;

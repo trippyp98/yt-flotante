@@ -265,7 +265,7 @@ function startExtensionBridge() {
     sock.on('message', (raw) => {
       let msg; try { msg = JSON.parse(raw); } catch { return; }
       if (msg.type === 'hello') { extVersion = msg.version || '?'; rebuildTrayMenu(); }
-      else if (msg.type === 'pip-open') watchForPip(3000);
+      else if (msg.type === 'pip-open') { if (msg.rect) adoptPipByRect(msg.rect); else watchForPip(3000); }
       else if (msg.type === 'pip-closed') forgetPip();
       else if (msg.type === 'label') toast(msg.text);
     });
@@ -321,6 +321,32 @@ function scanPip() {
     sendState();
     toast('Video flotante de Chrome detectado');
   }
+}
+
+// La extensión avisa dónde abrió su ventana flotante (posición y tamaño en pantalla):
+// se busca la ventana de Chrome que está justo ahí. Si no aparece, se deja un diagnóstico.
+function adoptPipByRect(rect, tries = 12) {
+  if (!settings.pipControl) return;
+  const h = pip.findWindowByRect(rect, process.pid);
+  if (h) {
+    const isNew = !pipHwnd || !pip.sameWindow(h, pipHwnd);
+    pipHwnd = h;
+    hovered.delete('pip');
+    sendState();
+    if (isNew) toast('Ventana flotante conectada');
+    return;
+  }
+  if (tries > 0) { setTimeout(() => adoptPipByRect(rect, tries - 1), 250); return; }
+  writeDiagnostics({ wanted: rect });
+  watchForPip(2000);
+}
+
+function writeDiagnostics(extra = {}) {
+  try {
+    const wins = pip.listBrowserWindows(process.pid).map((w) => ({ ...w, hwnd: undefined }));
+    const data = { when: new Date().toISOString(), version: app.getVersion(), ...extra, windows: wins };
+    fs.writeFileSync(path.join(app.getPath('userData'), 'diagnostico.json'), JSON.stringify(data, null, 2));
+  } catch (err) { console.warn('No se pudo escribir el diagnóstico', err); }
 }
 
 // Tras un aviso de la extensión, revisa seguido unos segundos (la ventana tarda un poco en aparecer).
@@ -551,6 +577,7 @@ function rebuildTrayMenu(version) {
     { label: 'Volver a la esquina inferior derecha', click: () => { if (win) win.setBounds(defaultBounds()); } },
     { type: 'separator' },
     { label: 'Extensión de Chrome…', click: showExtensionHelp },
+    { label: 'Guardar diagnóstico de ventanas', click: () => { writeDiagnostics({ manual: true }); shell.openPath(app.getPath('userData')); } },
     { label: 'Mostrar la ventana de la app al iniciar', type: 'checkbox', checked: !!settings.showOnStart, click: (i) => { settings.showOnStart = i.checked; saveSettings(); } },
     { label: 'Iniciar con Windows', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
   ];

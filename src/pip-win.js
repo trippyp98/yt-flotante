@@ -123,6 +123,45 @@ function findPipWindow(excludePid) {
   return best;
 }
 
+/** Todas las ventanas visibles de navegadores (para diagnóstico y para buscar por posición). */
+function listBrowserWindows(excludePid) {
+  if (!load()) return [];
+  const out = [];
+  api.EnumWindows((hwnd) => {
+    try {
+      if (!api.IsWindowVisible(hwnd) || api.IsIconic(hwnd)) return 1;
+      const pid = [0];
+      api.GetWindowThreadProcessId(hwnd, pid);
+      if (pid[0] === excludePid) return 1;
+      const exe = processName(pid[0]);
+      if (!BROWSERS.has(exe)) return 1;
+      const r = rectOf(hwnd);
+      if (!r || r.width < 80 || r.height < 50) return 1;
+      const ex = Number(api.GetWindowLongPtrW(hwnd, GWL_EXSTYLE));
+      out.push({ hwnd, exe, rect: r, topmost: !!(ex & WS_EX_TOPMOST),
+        cls: text(api.GetClassNameW, hwnd), title: text(api.GetWindowTextW, hwnd) });
+    } catch { /* ventana que desapareció */ }
+    return 1;
+  }, 0);
+  return out;
+}
+
+/**
+ * Busca la ventana del navegador que está en esa posición (la extensión manda dónde abrió
+ * su ventana flotante). Es más seguro que adivinar por el título.
+ * rect en píxeles físicos {x,y,width,height}.
+ */
+function findWindowByRect(rect, excludePid, tolerance = 24) {
+  let best = null;
+  let bestD = Infinity;
+  for (const w of listBrowserWindows(excludePid)) {
+    const d = Math.abs(w.rect.x - rect.x) + Math.abs(w.rect.y - rect.y) +
+      Math.abs(w.rect.width - rect.width) + Math.abs(w.rect.height - rect.height);
+    if (d < bestD) { bestD = d; best = w; }
+  }
+  return best && bestD <= tolerance * 4 ? best.hwnd : null;
+}
+
 function isAlive(hwnd) {
   return !!(hwnd && load() && api.IsWindow(hwnd) && api.IsWindowVisible(hwnd));
 }
@@ -151,4 +190,4 @@ function sameWindow(a, b) {
   return api.koffi.address(a) === api.koffi.address(b);
 }
 
-module.exports = { findPipWindow, isAlive, getRect, moveTo, setOpacity, sameWindow, SIGNATURES, declareTypes, PIP_TITLE };
+module.exports = { findPipWindow, findWindowByRect, listBrowserWindows, isAlive, getRect, moveTo, setOpacity, sameWindow, SIGNATURES, declareTypes, PIP_TITLE };

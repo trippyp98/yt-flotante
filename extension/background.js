@@ -9,12 +9,13 @@ const APP_URL = 'ws://127.0.0.1:47321';
 let ws = null;
 let pip = null;          // { tabId, frameId } con la ventana flotante abierta
 let lastHello = 0;
+let lastRect = null;     // última posición conocida de la ventana flotante
 
 // ---------------------------------------------------------------- conexión con la app
 function connect() {
   if (ws && ws.readyState <= 1) return;
   try { ws = new WebSocket(APP_URL); } catch { ws = null; return; }
-  ws.onopen = () => { send({ type: 'hello', version: YTF.VERSION }); if (pip) send({ type: 'pip-open' }); };
+  ws.onopen = () => { send({ type: 'hello', version: YTF.VERSION }); if (pip) send({ type: 'pip-open', rect: lastRect }); };
   ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } lastHello = Date.now(); onAppMessage(m); };
   ws.onclose = () => { ws = null; setTimeout(connect, 3000); };
   ws.onerror = () => {};
@@ -181,7 +182,8 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
   switch (m.type) {
     case 'pip-open':
       pip = { tabId, frameId: sender.frameId };
-      connect(); send({ type: 'pip-open' }); flashBadge('▶');
+      if (m.rect) lastRect = m.rect;
+      connect(); send({ type: 'pip-open', rect: m.rect || null }); if (!m.rect) flashBadge('▶');
       break;
     case 'pip-closed':
       if (pip && pip.tabId === tabId) { pip = null; send({ type: 'pip-closed' }); }

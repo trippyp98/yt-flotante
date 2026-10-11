@@ -203,7 +203,19 @@
     attachVideo(source.video);
     syncBar();
     session.timer = setInterval(syncBar, 1000);
-    send({ type: 'pip-open' });
+    // Le contamos a la app dónde quedó la ventana (en píxeles de pantalla) para que la encuentre
+    // y pueda moverla y volverla transparente.
+    const sendRect = () => {
+      if (!session || session.pipWin !== pipWin) return;
+      const d = pipWin.devicePixelRatio || window.devicePixelRatio || 1;
+      send({ type: 'pip-open', rect: {
+        x: Math.round(pipWin.screenX * d), y: Math.round(pipWin.screenY * d),
+        width: Math.round(pipWin.outerWidth * d), height: Math.round(pipWin.outerHeight * d),
+      } });
+    };
+    setTimeout(sendRect, 300);
+    let rt = null;
+    pipWin.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(sendRect, 400); });
     return true;
   }
 
