@@ -72,55 +72,19 @@
       speed: (d) => { v.playbackRate = Math.max(0.25, Math.min(4, Math.round((v.playbackRate + d) * 100) / 100)); return `Velocidad ${v.playbackRate}x`; },
       getSpeed: () => v.playbackRate,
       onEnded: (fn) => v.addEventListener('ended', fn),
-      title: () => document.title,
+      title: () => document.title.replace(/^\(\d+\)\s*/, '').replace(/ - YouTube$/, ''),
     };
   }
 
-  // Reproductor de YouTube incrustado (se controla con mensajes, sin cargar scripts externos).
-  function youtubePlayer(iframe, pipWin) {
-    const info = { volume: 100, playerState: -1, currentTime: 0, playbackRate: 1, title: '' };
-    const endedFns = [];
-    const cmd = (func, args = []) => iframe.contentWindow && iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
-    pipWin.addEventListener('message', (e) => {
-      if (e.source !== iframe.contentWindow) return;
-      let d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
-      if (d.event === 'infoDelivery' && d.info) {
-        Object.assign(info, d.info);
-        if (d.info.videoData && d.info.videoData.title) info.title = d.info.videoData.title;
-      }
-      if (d.event === 'onStateChange') {
-        info.playerState = d.info;
-        if (d.info === 0) setTimeout(() => { if (info.playerState === 0) endedFns.forEach((f) => f()); }, 1500);
-      }
-      if (d.event === 'onError') endedFns.forEach((f) => f({ error: d.info }));
-    });
-    iframe.addEventListener('load', () => {
-      const listen = () => iframe.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'ytf', channel: 'widget' }), '*');
-      listen(); setTimeout(listen, 500); setTimeout(listen, 1500);
-    });
-    return {
-      kind: 'yt',
-      cmd,
-      toggle: () => { if (info.playerState === 1) { cmd('pauseVideo'); return 'Pausa'; } cmd('playVideo'); return 'Play'; },
-      seek: (d) => { cmd('seekTo', [Math.max(0, (info.currentTime || 0) + d), true]); return `${d > 0 ? '+' : '−'}${Math.abs(d)} s`; },
-      volume: (d) => { const v = Math.max(0, Math.min(100, (info.volume || 0) + d * 100)); cmd('unMute'); cmd('setVolume', [v]); info.volume = v; return `Volumen ${Math.round(v)} %`; },
-      setVolume: (x) => { cmd('unMute'); cmd('setVolume', [x * 100]); info.volume = x * 100; },
-      getVolume: () => (info.volume || 0) / 100,
-      speed: (d) => { const r = Math.max(0.25, Math.min(2, Math.round(((info.playbackRate || 1) + d) * 100) / 100)); cmd('setPlaybackRate', [r]); info.playbackRate = r; return `Velocidad ${r}x`; },
-      getSpeed: () => info.playbackRate || 1,
-      next: () => cmd('nextVideo'),
-      prev: () => cmd('previousVideo'),
-      onEnded: (fn) => endedFns.push(fn),
-      title: () => info.title || 'YouTube',
-    };
-  }
-
-  function embedSrc(yt) {
-    const p = new URLSearchParams({ enablejsapi: '1', autoplay: '1', rel: '0', playsinline: '1', origin: location.origin });
-    if (yt.start) p.set('start', String(Math.floor(yt.start)));
-    if (yt.list) { p.set('list', yt.list); p.set('listType', 'playlist'); }
-    return `https://www.youtube.com/embed/${yt.id || 'videoseries'}?${p}`;
-  }
+  // En YouTube se usa el reproductor de la propia página, sin incrustar (así no aparece el
+  // "Error de configuración del reproductor" y sigues con tu sesión y tus preferencias).
+  // Sus funciones (cargar otro video, siguiente, anterior) viven en la página, así que se
+  // llaman a través del fondo de la extensión.
+  const onYouTube = () => /(^|\.)youtube\.com$/.test(location.hostname);
+  const ytMain = (fn, args = []) => send({ type: 'yt-main', fn, args });
+  // Cambia de video (o a una playlist) navegando DENTRO de YouTube, como si hicieras clic en un
+  // video: el reproductor sigue siendo el mismo, así que continúa en la ventana flotante.
+  const ytLoad = (yt) => send({ type: 'yt-go', yt });
 
   // ---------------------------------------------------------------- ventana flotante
   const CSS = `
@@ -219,7 +183,7 @@
       if (e.code === 'ArrowDown' && p()) { note($, p().volume(-0.05)); syncBar(); }
     });
 
-    if (source.video) attachVideo(source.video); else attachYouTube(source.yt);
+    attachVideo(source.video);
     syncBar();
     session.timer = setInterval(syncBar, 1000);
     send({ type: 'pip-open' });
@@ -233,7 +197,7 @@
     const vol = $('vol');
     if (session.pipWin.document.activeElement !== vol) vol.value = Math.round(player.getVolume() * 100);
     $('spd').textContent = `${player.getSpeed()}x`;
-    const hasList = !!queue || player.kind === 'yt';
+    const hasList = !!queue || onYouTube();
     $('prev').style.display = $('nextBtn').style.display = hasList ? '' : 'none';
     $('listBtn').style.display = queue ? '' : 'none';
   }
@@ -256,26 +220,6 @@
     if (session && session.video && session.placeholder && session.placeholder.isConnected) {
       session.placeholder.replaceWith(session.video);
     }
-  }
-
-  function attachYouTube(yt) {
-    const { $, pipWin } = session;
-    restoreVideo();
-    session.video = null; session.placeholder = null;
-    $('stage').innerHTML = '';
-    const f = pipWin.document.createElement('iframe');
-    f.allow = 'autoplay; encrypted-media; picture-in-picture';
-    f.referrerPolicy = 'strict-origin-when-cross-origin';
-    $('stage').appendChild(f);
-    session.iframe = f;
-    session.player = youtubePlayer(f, pipWin);
-    session.player.onEnded((ev) => {
-      if (ev && ev.error) { note($, 'Este video no se puede reproducir flotando'); }
-      onItemEnded();
-    });
-    // Importante: se navega el iframe DESDE la página (no con iframe.src), así YouTube recibe
-    // la página de origen ("Referer"). Sin eso responde "Error 153".
-    f.contentWindow.location.href = embedSrc(yt);
   }
 
   function closeSession() {
@@ -309,18 +253,26 @@
 
   function step(dir) {
     if (!session) return;
-    const { queue, player } = session;
-    if (!queue) { if (player && player.kind === 'yt') (dir > 0 ? player.next : player.prev)(); return; }
+    const { queue } = session;
+    if (!queue) { if (onYouTube()) ytMain(dir > 0 ? 'nextVideo' : 'previousVideo'); return; }
     // dentro de una lista de YouTube (playlist) primero se avanza dentro de ella
     const it = queue.items[queue.index];
     const yt = it && YTF.parseYouTube(it.url);
-    if (yt && yt.list && player.kind === 'yt') { (dir > 0 ? player.next : player.prev)(); return; }
+    if (yt && yt.list && onYouTube()) { ytMain(dir > 0 ? 'nextVideo' : 'previousVideo'); return; }
     playIndex(queue.index + dir);
   }
 
   function onItemEnded() {
     if (!session || !session.queue) return;
-    playIndex(session.queue.index + 1, true);
+    const q = session.queue;
+    const yt = q.items[q.index] && YTF.parseYouTube(q.items[q.index].url);
+    if (yt && yt.list && onYouTube()) {
+      // una playlist de YouTube sigue sola; solo se pasa al siguiente de tu lista cuando termina
+      const v = session.video;
+      setTimeout(() => { if (session && v && v.ended) playIndex(q.index + 1, true); }, 4000);
+      return;
+    }
+    playIndex(q.index + 1, true);
   }
 
   // Reproduce el elemento i de la lista dentro de la ventana flotante.
@@ -334,9 +286,9 @@
     send({ type: 'queue-pos', queue: { name: queue.name, items: queue.items, index: i, loop: queue.loop } });
     const it = queue.items[i];
     const yt = YTF.parseYouTube(it.url);
-    if (yt) { $('next').classList.remove('show'); attachYouTube(yt); syncBar(); return; }
+    if (yt && onYouTube() && session.video) { $('next').classList.remove('show'); ytLoad(yt); syncBar(); return; }
 
-    // Página normal (una clase, por ejemplo): hay que abrirla en esta pestaña.
+    // Página normal (una clase) o un YouTube estando en otra página: se abre en esta pestaña.
     $('nextTitle').textContent = it.title || it.url;
     $('next').classList.add('show');
     const go = () => {
@@ -357,12 +309,15 @@
     if (!items.length) { pageBubble(`Tu lista "${data.active}" está vacía. Agrega videos con clic derecho → YT Flotante.`, '', null, 5000); return; }
     if (data.shuffle) items = items.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
     const queue = { name: data.active, items, index: 0, loop: data.loop };
-    const first = YTF.parseYouTube(items[0].url);
-    if (first) {
-      if (!(await startSession({ yt: first }, queue))) failBubble();
-      else send({ type: 'queue-pos', queue });
+    const yt = YTF.parseYouTube(items[0].url);
+    const v = biggestVideo();
+    if (yt && onYouTube() && v) {
+      // ya estamos en YouTube: se pone a flotar este reproductor y se carga el primero de la lista
+      if (!(await startSession({ video: v }, queue))) { failBubble(); return; }
+      ytLoad(yt);
+      send({ type: 'queue-pos', queue });
     } else {
-      // la primera es una página: abrirla y ahí ofrecer flotar
+      // se abre el primero en esta pestaña y ahí se ofrece flotar (Chrome pide un clic o Alt+Y)
       send({ type: 'open-queue-page', url: items[0].url, queue });
     }
   }
@@ -375,17 +330,6 @@
   async function floatHere(queue = null) {
     if (session) { closeSession(); return true; }
     if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return true; }
-
-    // YouTube con lista (playlist): se abre el reproductor de YouTube en la ventana flotante.
-    // Un video suelto de YouTube se mueve tal cual (abajo), igual que en cualquier página.
-    const ytHere = TOP && isYouTubePage() ? YTF.parseYouTube(location.href) : null;
-    if (ytHere && ytHere.list && 'documentPictureInPicture' in window) {
-      const yt = ytHere;
-      const v = biggestVideo();
-      if (v) { yt.start = v.currentTime; v.pause(); }
-      if (await startSession({ yt }, queue)) return true;
-      if (v) v.play().catch(() => {});
-    }
 
     const v = biggestVideo();
     if (v) {

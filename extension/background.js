@@ -194,6 +194,41 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
       chrome.storage.session.get(key).then((r) => { chrome.storage.session.remove(key); reply({ queue: r[key] || null }); });
       return true;
     }
+    case 'yt-main':
+      // funciones del reproductor de YouTube de la página (loadVideoById, nextVideo…)
+      chrome.scripting.executeScript({
+        target: { tabId, frameIds: [sender.frameId] }, world: 'MAIN', args: [m.fn, m.args || []],
+        func: (fn, args) => {
+          const p = document.getElementById('movie_player');
+          if (p && typeof p[fn] === 'function') { p[fn](...args); return true; }
+          return false;
+        },
+      }).then((r) => reply({ ok: !!(r && r[0] && r[0].result) })).catch(() => reply({ ok: false }));
+      return true;
+    case 'yt-go':
+      // navegar dentro de YouTube (sin recargar) a un video o a una playlist
+      chrome.scripting.executeScript({
+        target: { tabId, frameIds: [0] }, world: 'MAIN', args: [m.yt],
+        func: async (yt) => {
+          let vid = yt.id;
+          if (!vid && yt.list) {
+            const h = await fetch('/playlist?list=' + encodeURIComponent(yt.list)).then((r) => r.text());
+            vid = (h.match(/"videoId":"([\w-]{11})"/) || [])[1];
+          }
+          const app = document.querySelector('ytd-app');
+          if (!vid || !app) return false;
+          const url = `/watch?v=${vid}` + (yt.list ? `&list=${yt.list}` : '') + (yt.start ? `&t=${yt.start}s` : '');
+          const we = { videoId: vid };
+          if (yt.list) we.playlistId = yt.list;
+          if (yt.start) we.startTimeSeconds = yt.start;
+          app.dispatchEvent(new CustomEvent('yt-navigate', {
+            bubbles: true, composed: true,
+            detail: { endpoint: { commandMetadata: { webCommandMetadata: { url, webPageType: 'WEB_PAGE_TYPE_WATCH', rootVe: 3832 } }, watchEndpoint: we } },
+          }));
+          return true;
+        },
+      }).then((r) => reply({ ok: !!(r && r[0] && r[0].result) })).catch(() => reply({ ok: false }));
+      return true;
     case 'status':
       reply({ app: !!(ws && ws.readyState === 1), version: YTF.VERSION, floating: !!pip });
       break;
