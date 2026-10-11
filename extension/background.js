@@ -27,9 +27,9 @@ chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'ytf-connect') connect
 connect();
 
 function flashBadge(text, color = '#ff3b30') {
-  chrome.action.setBadgeBackgroundColor({ color });
-  chrome.action.setBadgeText({ text: String(text).slice(0, 4) });
-  setTimeout(() => chrome.action.setBadgeText({ text: '' }), 1500);
+  chrome.action.setBadgeBackgroundColor({ color }).catch(() => {});
+  chrome.action.setBadgeText({ text: String(text).slice(0, 4) }).catch(() => {});
+  setTimeout(() => chrome.action.setBadgeText({ text: '' }).catch(() => {}), 1500);
 }
 
 // Busca un video en "Imagen en imagen" normal (abierto desde el propio reproductor).
@@ -141,6 +141,12 @@ async function addItem(url, title, tab) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
+  // Poner la versión nueva en las pestañas que ya estaban abiertas (sin tener que recargarlas).
+  chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }).then((tabs) => {
+    for (const t of tabs) {
+      chrome.scripting.executeScript({ target: { tabId: t.id, allFrames: true }, files: ['common.js', 'content.js'] }).catch(() => {});
+    }
+  }).catch(() => {});
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: 'ytf-float', title: 'Poner este video a flotar (Alt+Y)', contexts: ['page', 'video'] });
     chrome.contextMenus.create({ id: 'ytf-add-page', title: 'Agregar esta página a mi lista', contexts: ['page', 'video'] });
@@ -157,10 +163,10 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   switch (info.menuItemId) {
     case 'ytf-float': floatTab(tab); break;
-    case 'ytf-add-page': addItem(tab.url, tab.title, tab); break;
-    case 'ytf-add-link': addItem(info.linkUrl, info.selectionText || '', tab); break;
+    case 'ytf-add-page': addItem(tab.url, tab.title, tab).catch(() => {}); break;
+    case 'ytf-add-link': addItem(info.linkUrl, info.selectionText || '', tab).catch(() => {}); break;
     case 'ytf-play':
-      await ensureContent(tab.id);
+      await ensureContent(tab.id).catch(() => {});
       chrome.tabs.sendMessage(tab.id, { type: 'start-list' }, { frameId: 0 }).catch(() => {});
       break;
     case 'ytf-manage': chrome.runtime.openOptionsPage(); break;
@@ -187,11 +193,11 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
       chrome.tabs.sendMessage(tabId, { type: 'start-list' }, { frameId: 0 }).catch(() => {});
       break;
     case 'open-queue-page':
-      chrome.storage.session.set({ ['pending_' + tabId]: m.queue }).then(() => chrome.tabs.update(tabId, { url: m.url }));
+      chrome.storage.session.set({ ['pending_' + tabId]: m.queue }).then(() => chrome.tabs.update(tabId, { url: m.url })).catch(() => {});
       break;
     case 'get-pending': {
       const key = 'pending_' + tabId;
-      chrome.storage.session.get(key).then((r) => { chrome.storage.session.remove(key); reply({ queue: r[key] || null }); });
+      chrome.storage.session.get(key).then((r) => { chrome.storage.session.remove(key); reply({ queue: r[key] || null }); }).catch(() => reply({ queue: null }));
       return true;
     }
     case 'yt-main':

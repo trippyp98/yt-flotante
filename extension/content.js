@@ -10,8 +10,16 @@
 // para abrir ventanas flotantes).
 
 (() => {
-  if (window.__ytfLoaded) return;
-  window.__ytfLoaded = true;
+  // Si la extensión se actualiza, la copia vieja que quedó en las pestañas abiertas se retira
+  // sola para que no choque con la nueva (antes había que recargar cada pestaña con F5).
+  let retired = false;
+  const alive = () => { if (retired) return false; try { return !!chrome.runtime.id; } catch { retired = true; return false; } };
+  const prev = window.__ytfInstance;
+  if (prev && prev.alive()) return;          // ya hay una copia funcionando en esta página
+  if (prev) prev.retire();
+  window.__ytfInstance = { alive, retire: () => { retired = true; } };
+  document.dispatchEvent(new Event('ytf-retire'));
+  document.addEventListener('ytf-retire', () => { retired = true; });
 
   const TOP = window === window.top;
   const BAR_H = 36;
@@ -31,7 +39,8 @@
   }
 
   function send(msg) {
-    try { return chrome.runtime.sendMessage(msg); } catch { return Promise.resolve(); }
+    // .catch evita errores en la consola cuando la extensión se recarga o no hay quien responda
+    try { return chrome.runtime.sendMessage(msg).catch(() => undefined); } catch { return Promise.resolve(); }
   }
 
   // Aviso / botón que aparece en la página (por ejemplo "▶ Flotar esta clase").
@@ -361,7 +370,7 @@
 
   // Teclas (se escuchan antes que la página, en fase de captura)
   window.addEventListener('keydown', (e) => {
-    if (!e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!e.altKey || e.ctrlKey || e.metaKey || !alive()) return;
     if (e.code === 'KeyY' && e.shiftKey) {
       if (TOP && isYouTubePage()) { e.preventDefault(); e.stopPropagation(); sendToApp(); }
       return;
@@ -377,6 +386,7 @@
 
   // Mensajes desde el fondo (botón de la barra, menú contextual, controles que manda la app)
   chrome.runtime.onMessage.addListener((m, _sender, reply) => {
+    if (retired) return false;
     if (m.type === 'float') {
       floatHere(pendingQueue).then((ok) => { if (!ok && TOP) failBubble(); reply({ ok }); });
       return true;
