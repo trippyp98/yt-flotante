@@ -266,11 +266,16 @@
     const f = pipWin.document.createElement('iframe');
     f.allow = 'autoplay; encrypted-media; picture-in-picture';
     f.referrerPolicy = 'strict-origin-when-cross-origin';
-    f.src = embedSrc(yt);
     $('stage').appendChild(f);
     session.iframe = f;
     session.player = youtubePlayer(f, pipWin);
-    session.player.onEnded(() => onItemEnded());
+    session.player.onEnded((ev) => {
+      if (ev && ev.error) { note($, 'Este video no se puede reproducir flotando'); }
+      onItemEnded();
+    });
+    // Importante: se navega el iframe DESDE la página (no con iframe.src), así YouTube recibe
+    // la página de origen ("Referer"). Sin eso responde "Error 153".
+    f.contentWindow.location.href = embedSrc(yt);
   }
 
   function closeSession() {
@@ -371,9 +376,11 @@
     if (session) { closeSession(); return true; }
     if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return true; }
 
-    // YouTube: se abre el reproductor de YouTube en la ventana flotante, en el mismo minuto
-    if (TOP && isYouTubePage() && 'documentPictureInPicture' in window) {
-      const yt = YTF.parseYouTube(location.href);
+    // YouTube con lista (playlist): se abre el reproductor de YouTube en la ventana flotante.
+    // Un video suelto de YouTube se mueve tal cual (abajo), igual que en cualquier página.
+    const ytHere = TOP && isYouTubePage() ? YTF.parseYouTube(location.href) : null;
+    if (ytHere && ytHere.list && 'documentPictureInPicture' in window) {
+      const yt = ytHere;
       const v = biggestVideo();
       if (v) { yt.start = v.currentTime; v.pause(); }
       if (await startSession({ yt }, queue)) return true;
